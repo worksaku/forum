@@ -1,0 +1,35 @@
+services:
+  sqlserver:
+    image: mcr.microsoft.com/azure-sql-edge
+    container_name: sqlserver
+    environment:
+      SA_PASSWORD: "YourStrong!Passw0rd"
+      ACCEPT_EULA: "1"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    networks:
+      - backend_network
+
+  sqlserver-tests:
+    image: mcr.microsoft.com/azure-sql-edge
+    container_name: sqlserver-tests
+    environment:
+      SA_PASSWORD: "YourStrong!Passw0rd"
+      ACCEPT_EULA: "1"
+    ports:
+      - "1435:1433"
+    volumes:
+      - sqlserver_tests_data:/var/opt/mssql
+    networks:
+      - backend_network
+
+volumes:
+  sqlserver_data:
+    driver: local
+  sqlserver_tests_data:
+    driver: local
+
+networks:
+  backend_network:
