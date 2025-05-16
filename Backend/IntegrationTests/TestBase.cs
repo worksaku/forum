@@ -1,5 +1,4 @@
 using Forum.Data;
-using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Forum.IntegrationTests;
@@ -7,9 +6,9 @@ namespace Forum.IntegrationTests;
 public abstract class TestBase : IAsyncLifetime
 {
     protected readonly HttpClient Client;
-    private readonly IServiceScope _scope;
     protected readonly ForumDbContext Db;
     protected readonly CustomWebAppFactory Factory;
+    private readonly IServiceScope _scope;
 
     public TestBase(CustomWebAppFactory factory)
     {
@@ -21,13 +20,14 @@ public abstract class TestBase : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await Db.Database.EnsureDeletedAsync();
+        // Ensure database is created and clean before each test
         await Db.Database.EnsureCreatedAsync();
+        await TestDbCleaner.ClearDatabaseAsync(Db);
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
+        await Db.DisposeAsync();
         _scope.Dispose();
-        return Task.CompletedTask;
     }
 }

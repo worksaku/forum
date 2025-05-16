@@ -1,4 +1,3 @@
-using System.Net.Http.Json;
 using Forum.Models;
 using Xunit;
 
@@ -26,11 +25,12 @@ public class PostApiTests : TestBase, IClassFixture<CustomWebAppFactory>
     public async Task GetPosts_ReturnsPosts()
     {
         // Arrange
-        Db.Posts.Add(new Post { Title = "Hello test!", Content = "This is a test post." });
+        var user = Db.Users.Add(new User { Username = "test", Email = "test@example.com", PasswordHash = "test" });
+        Db.Posts.Add(new Post { Title = "Hello test!", Content = "This is a test post.", AuthorId = user.Entity.Id });
         await Db.SaveChangesAsync();
 
         // Act
-        var posts = await Client.GetFromJsonAsync<List<Post>>("/api/posts");
+        var posts = await Client.GetFromJsonAsync<List<PostResponse>>("/api/posts");
 
         // Assert
         Assert.NotNull(posts);
@@ -42,18 +42,20 @@ public class PostApiTests : TestBase, IClassFixture<CustomWebAppFactory>
     public async Task GetPosts_DoesntReturn_SoftDeleted()
     {
         // Arrange
+        var user = Db.Users.Add(new User { Username = "test1", Email = "test@example.com", PasswordHash = "test" });
         Db.Posts.Add(
             new Post
             {
                 Title = "Hello test!",
                 Content = "This is a test post.",
                 IsDeleted = true,
+                AuthorId = user.Entity.Id,
             }
         );
         await Db.SaveChangesAsync();
 
         // Act
-        var posts = await Client.GetFromJsonAsync<List<Post>>("/api/posts");
+        var posts = await Client.GetFromJsonAsync<List<PostResponse>>("/api/posts");
 
         // Assert
         Assert.NotNull(posts);
@@ -67,7 +69,8 @@ public class PostApiTests : TestBase, IClassFixture<CustomWebAppFactory>
     public async Task GetPost_ReturnsPost()
     {
         // Arrange
-        var post = new Post { Title = "Hello test!", Content = "This is a test post." };
+        var user = Db.Users.Add(new User { Username = "test", Email = "foobar@example.com", PasswordHash = "test" });
+        var post = new Post { Title = "Hello test!", Content = "This is a test post.", AuthorId = user.Entity.Id };
         Db.Posts.Add(post);
         await Db.SaveChangesAsync();
 
@@ -93,11 +96,13 @@ public class PostApiTests : TestBase, IClassFixture<CustomWebAppFactory>
     public async Task GetPost_ReturnsNotFound_SoftDeleted()
     {
         // Arrange
+        var user = Db.Users.Add(new User { Username = "test", Email = "foobar@example.com", PasswordHash = "test" });
         var post = new Post
         {
             Title = "Hello test!",
             Content = "This is a test post.",
             IsDeleted = true,
+            AuthorId = user.Entity.Id,
         };
         Db.Posts.Add(post);
         await Db.SaveChangesAsync();
@@ -115,6 +120,19 @@ public class PostApiTests : TestBase, IClassFixture<CustomWebAppFactory>
     public async Task CreatePost_ReturnsPost()
     {
         // Arrange
+        var testUser = new User
+        {
+            Username = "testuser",
+            Email = "test@example.com",
+            PasswordHash = "hashed", // doesn't matter for token-only usage
+        };
+
+        Db.Users.Add(testUser);
+        await Db.SaveChangesAsync();
+
+        var token = AuthTestHelper.GenerateJwtToken(testUser.Id, testUser.Username, Factory.Configuration);
+        Client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+
         var post = new CreatePostRequest("Hello test!", "This is a test post.");
 
         // Act
@@ -134,7 +152,8 @@ public class PostApiTests : TestBase, IClassFixture<CustomWebAppFactory>
     public async Task UpdatePost_ReturnsPost()
     {
         // Arrange
-        var post = new Post { Title = "Hello test!", Content = "This is a test post." };
+        var user = Db.Users.Add(new User { Username = "test", Email = "foobar@example.com", PasswordHash = "test" });
+        var post = new Post { Title = "Hello test!", Content = "This is a test post.", AuthorId = user.Entity.Id };
         Db.Posts.Add(post);
         await Db.SaveChangesAsync();
 
@@ -154,7 +173,7 @@ public class PostApiTests : TestBase, IClassFixture<CustomWebAppFactory>
     public async Task UpdatePost_ReturnsNotFound()
     {
         // Arrange
-        var updatePost = new UpdatePostRequest("Updated title", "Updated content");;
+        var updatePost = new UpdatePostRequest("Updated title", "Updated content");
 
         // Act
         var result = await Client.PatchAsJsonAsync(
@@ -170,16 +189,18 @@ public class PostApiTests : TestBase, IClassFixture<CustomWebAppFactory>
     public async Task UpdatePost_ReturnsNotFound_SoftDeleted()
     {
         // Arrange
+        var user = Db.Users.Add(new User { Username = "test", Email = "foobar@example.com", PasswordHash = "test" });
         var post = new Post
         {
             Title = "Hello test!",
             Content = "This is a test post.",
             IsDeleted = true,
+            AuthorId = user.Entity.Id,
         };
         Db.Posts.Add(post);
         await Db.SaveChangesAsync();
 
-        var updatePost = new UpdatePostRequest("Updated title", "Updated content");;
+        var updatePost = new UpdatePostRequest("Updated title", "Updated content");
 
         // Act
         var result = await Client.PatchAsJsonAsync($"/api/posts/{post.Id}", updatePost);
@@ -194,7 +215,8 @@ public class PostApiTests : TestBase, IClassFixture<CustomWebAppFactory>
     public async Task DeletePost_ReturnsNoContent()
     {
         // Arrange
-        var post = new Post { Title = "Hello test!", Content = "This is a test post." };
+        var user = Db.Users.Add(new User { Username = "test", Email = "foobar@example.com", PasswordHash = "test" });
+        var post = new Post { Title = "Hello test!", Content = "This is a test post.", AuthorId = user.Entity.Id };
         Db.Posts.Add(post);
         await Db.SaveChangesAsync();
 
@@ -219,11 +241,13 @@ public class PostApiTests : TestBase, IClassFixture<CustomWebAppFactory>
     public async Task DeletePost_ReturnsNotFound_SoftDeleted()
     {
         // Arrange
+        var user = Db.Users.Add(new User { Username = "test", Email = "foobar@example.com", PasswordHash = "test" });
         var post = new Post
         {
             Title = "Hello test!",
             Content = "This is a test post.",
             IsDeleted = true,
+            AuthorId = user.Entity.Id,
         };
         Db.Posts.Add(post);
         await Db.SaveChangesAsync();

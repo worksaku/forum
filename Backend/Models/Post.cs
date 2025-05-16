@@ -4,6 +4,8 @@ public class Post : BaseModel
 {
     public required string Title { get; set; }
     public required string Content { get; set; }
+    public Guid AuthorId { get; set; }
+    public User Author { get; set; } = null!;
 }
 
 public record PostResponse(
