@@ -44,11 +44,17 @@ public class PostsController(ForumDbContext context) : ControllerBase
     }
 
     [HttpPatch("{id}")]
+    [Authorize]
     public async Task<ActionResult<PostResponse>> UpdatePost(Guid id, UpdatePostRequest post)
     {
         var item = await context.Posts.FindAsync(id);
         if (item == null || item.IsDeleted)
             return NotFound();
+
+        // Ensure the user is the author of the post
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId != null && item.AuthorId != Guid.Parse(userId))
+            return Forbid();
 
         item.Title = post.Title;
         item.Content = post.Content;
@@ -63,6 +69,11 @@ public class PostsController(ForumDbContext context) : ControllerBase
         var item = await context.Posts.FindAsync(id);
         if (item == null || item.IsDeleted)
             return NotFound();
+
+        // Ensure the user is authorized to delete the post
+        var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (userId != null && item.AuthorId != Guid.Parse(userId))
+            return Forbid();
 
         item.IsDeleted = true;
         await context.SaveChangesAsync();

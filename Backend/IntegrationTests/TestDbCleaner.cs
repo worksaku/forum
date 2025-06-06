@@ -7,8 +7,7 @@ public static class TestDbCleaner
 {
     public static async Task ClearDatabaseAsync(ForumDbContext db)
     {
-        // Delete in reverse FK order if needed
-        await db.Posts.ExecuteDeleteAsync();
-        await db.Users.ExecuteDeleteAsync();
+        await db.Posts.IgnoreQueryFilters().ExecuteDeleteAsync();
+        await db.Users.IgnoreQueryFilters().ExecuteDeleteAsync();
     }
 }
